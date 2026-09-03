@@ -17,6 +17,8 @@ public class PurchaseInvoice
     public decimal TotalAmount { get; set; }
 
     public string Status { get; set; } = "Draft";
+    
+    public ICollection<PurchaseInvoiceItem> PurchaseInvoiceItems { get; set; } = new List<PurchaseInvoiceItem>();
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

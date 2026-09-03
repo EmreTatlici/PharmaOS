@@ -4,6 +4,7 @@ using PharmaOS.API.Data;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddControllers();
 
 builder.Services.AddDbContext<PharmaOSDbContext>(options =>
     options.UseNpgsql(
@@ -16,6 +17,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.MapControllers();
 
 app.UseHttpsRedirection();
 
