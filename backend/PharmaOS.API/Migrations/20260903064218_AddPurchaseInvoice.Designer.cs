@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PharmaOS.API.Data;
@@ -11,9 +12,11 @@ using PharmaOS.API.Data;
 namespace PharmaOS.API.Migrations
 {
     [DbContext(typeof(PharmaOSDbContext))]
-    partial class PharmaOSDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260903064218_AddPurchaseInvoice")]
+    partial class AddPurchaseInvoice
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
