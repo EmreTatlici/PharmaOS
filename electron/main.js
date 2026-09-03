@@ -5,7 +5,7 @@ const createWindow = () => {
     width: 1400,
     height: 900,
   });
-  win.loadURL("http:" + "//localhost:5173");
+  win.loadURL("http:" + "//localhost:5174");
 };
 
 app.whenReady().then(() => {

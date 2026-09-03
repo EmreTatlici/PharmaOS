@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react'
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
-
 import './App.css'
 
 const menuGroups = [
@@ -102,6 +100,32 @@ function Topbar() {
         </div>
       </div>
     </header>
+  )
+}
+
+function Page({ title, description }) {
+  return (
+    <section className="dashboard">
+      <div className="section-heading">
+        <div>
+          <h3>{title}</h3>
+          <p>{description}</p>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-header">
+          <div>
+            <h3>{title}</h3>
+            <p>Bu bölüm üzerinde çalışıyoruz.</p>
+          </div>
+        </div>
+
+        <div style={{ padding: '40px', color: '#94a3b8' }}>
+          PharmaOS bu ekranı yakında kullanıma hazır hale getirecek.
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -280,123 +304,6 @@ function Dashboard() {
   )
 }
 
-function DrugsPage() {
-  const [drugs, setDrugs] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    fetch('http:' + '//localhost:5116/api/Drugs')
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('İlaç verileri alınamadı.')
-        }
-
-        return response.json()
-      })
-      .then((data) => {
-        setDrugs(data)
-        setLoading(false)
-      })
-      .catch(() => {
-        setError('İlaç verileri yüklenirken bir hata oluştu.')
-        setLoading(false)
-      })
-  }, [])
-
-  return (
-    <section className="dashboard">
-      <div className="section-heading">
-        <div>
-          <h3>İlaç & Stok</h3>
-          <p>İlaçlarınızı, stoklarınızı, lot ve SKT bilgilerinizi yönetin.</p>
-        </div>
-
-        <button className="primary-button">+ Yeni İlaç</button>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <div>
-            <h3>İlaç Listesi</h3>
-            <p>Veritabanındaki ilaçlar</p>
-          </div>
-
-          <span>{drugs.length} ürün</span>
-        </div>
-
-        {loading && (
-          <div style={{ padding: '40px', color: '#64748b' }}>
-            İlaçlar yükleniyor...
-          </div>
-        )}
-
-        {error && (
-          <div style={{ padding: '40px', color: '#dc2626' }}>
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && (
-          <div className="table">
-            <div className="table-header">
-              <span>Ürün</span>
-              <span>Barkod</span>
-              <span>Etken Madde</span>
-              <span>Üretici</span>
-            </div>
-
-            {drugs.map((drug) => (
-              <div className="table-row" key={drug.id}>
-                <div className="product">
-                  <div className="product-icon">💊</div>
-                  <strong>{drug.name}</strong>
-                </div>
-
-                <span>{drug.barcode}</span>
-                <span>{drug.activeIngredient}</span>
-                <span>{drug.manufacturer}</span>
-              </div>
-            ))}
-
-            {drugs.length === 0 && (
-              <div style={{ padding: '40px', color: '#94a3b8' }}>
-                Henüz ilaç kaydı bulunmuyor.
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </section>
-  )
-}
-
-function Page({ title, description }) {
-  return (
-    <section className="dashboard">
-      <div className="section-heading">
-        <div>
-          <h3>{title}</h3>
-          <p>{description}</p>
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <div>
-            <h3>{title}</h3>
-            <p>Bu bölüm üzerinde çalışıyoruz.</p>
-          </div>
-        </div>
-
-        <div style={{ padding: '40px', color: '#94a3b8' }}>
-          PharmaOS bu ekranı yakında kullanıma hazır hale getirecek.
-        </div>
-      </div>
-    </section>
-  )
-}
-
 function App() {
   return (
     <BrowserRouter>
@@ -409,7 +316,15 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
 
-            <Route path="/stok" element={<DrugsPage />} />
+            <Route
+              path="/stok"
+              element={
+                <Page
+                  title="İlaç & Stok"
+                  description="İlaçlarınızı, stoklarınızı, lot ve SKT bilgilerinizi yönetin."
+                />
+              }
+            />
 
             <Route
               path="/hastalar"
