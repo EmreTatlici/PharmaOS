@@ -17,4 +17,5 @@ public class PharmaOSDbContext : DbContext
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<PurchaseInvoice> PurchaseInvoices => Set<PurchaseInvoice>();
+    public DbSet<PurchaseInvoiceItem> PurchaseInvoiceItems => Set<PurchaseInvoiceItem>();
 }
