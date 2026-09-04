@@ -5,10 +5,10 @@ public class InventoryItem
     public int Id { get; set; }
 
     public int PharmacyId { get; set; }
-    public Pharmacy Pharmacy { get; set; } = null!;
+    public Pharmacy? Pharmacy { get; set; }
 
     public int DrugId { get; set; }
-    public Drug Drug { get; set; } = null!;
+    public Drug? Drug { get; set; }
 
     public int Quantity { get; set; }
 
