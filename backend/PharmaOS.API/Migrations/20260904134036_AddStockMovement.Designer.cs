@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PharmaOS.API.Data;
@@ -11,9 +12,11 @@ using PharmaOS.API.Data;
 namespace PharmaOS.API.Migrations
 {
     [DbContext(typeof(PharmaOSDbContext))]
-    partial class PharmaOSDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260904134036_AddStockMovement")]
+    partial class AddStockMovement
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -308,9 +311,6 @@ namespace PharmaOS.API.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Note")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PaymentType")
                         .HasColumnType("text");
 
                     b.Property<int>("PharmacyId")
