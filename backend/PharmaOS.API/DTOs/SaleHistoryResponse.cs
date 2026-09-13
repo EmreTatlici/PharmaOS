@@ -17,6 +17,7 @@ public class SaleHistoryResponse
     public decimal UnitSalePrice { get; set; }
 
     public decimal TotalAmount { get; set; }
-public string? PaymentType { get; set; }
+    public string? PaymentType { get; set; }
+    public string? SaleType { get; set; }
     public DateTime SoldAt { get; set; }
 }

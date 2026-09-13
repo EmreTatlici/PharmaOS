@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PharmaOS.API.Data;
@@ -11,9 +12,11 @@ using PharmaOS.API.Data;
 namespace PharmaOS.API.Migrations
 {
     [DbContext(typeof(PharmaOSDbContext))]
-    partial class PharmaOSDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913133853_AddSaleTypeToStockMovement")]
+    partial class AddSaleTypeToStockMovement
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -59,7 +62,7 @@ namespace PharmaOS.API.Migrations
 
                     b.HasIndex("PharmacyId");
 
-                    b.ToTable("DailyClosings", (string)null);
+                    b.ToTable("DailyClosings");
                 });
 
             modelBuilder.Entity("PharmaOS.API.Models.Drug", b =>
@@ -102,7 +105,7 @@ namespace PharmaOS.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Drugs", (string)null);
+                    b.ToTable("Drugs");
                 });
 
             modelBuilder.Entity("PharmaOS.API.Models.InventoryItem", b =>
@@ -144,7 +147,7 @@ namespace PharmaOS.API.Migrations
 
                     b.HasIndex("PharmacyId");
 
-                    b.ToTable("InventoryItems", (string)null);
+                    b.ToTable("InventoryItems");
                 });
 
             modelBuilder.Entity("PharmaOS.API.Models.Patient", b =>
@@ -198,7 +201,7 @@ namespace PharmaOS.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Patients", (string)null);
+                    b.ToTable("Patients");
                 });
 
             modelBuilder.Entity("PharmaOS.API.Models.Pharmacy", b =>
@@ -241,7 +244,7 @@ namespace PharmaOS.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Pharmacies", (string)null);
+                    b.ToTable("Pharmacies");
                 });
 
             modelBuilder.Entity("PharmaOS.API.Models.PurchaseInvoice", b =>
@@ -281,7 +284,7 @@ namespace PharmaOS.API.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("PurchaseInvoices", (string)null);
+                    b.ToTable("PurchaseInvoices");
                 });
 
             modelBuilder.Entity("PharmaOS.API.Models.PurchaseInvoiceItem", b =>
@@ -320,7 +323,7 @@ namespace PharmaOS.API.Migrations
 
                     b.HasIndex("PurchaseInvoiceId");
 
-                    b.ToTable("PurchaseInvoiceItems", (string)null);
+                    b.ToTable("PurchaseInvoiceItems");
                 });
 
             modelBuilder.Entity("PharmaOS.API.Models.StockMovement", b =>
@@ -384,7 +387,7 @@ namespace PharmaOS.API.Migrations
 
                     b.HasIndex("PharmacyId");
 
-                    b.ToTable("StockMovements", (string)null);
+                    b.ToTable("StockMovements");
                 });
 
             modelBuilder.Entity("PharmaOS.API.Models.Supplier", b =>
@@ -427,7 +430,7 @@ namespace PharmaOS.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Suppliers", (string)null);
+                    b.ToTable("Suppliers");
                 });
 
             modelBuilder.Entity("PharmaOS.API.Models.User", b =>
@@ -467,7 +470,7 @@ namespace PharmaOS.API.Migrations
 
                     b.HasIndex("PharmacyId");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("PharmaOS.API.Models.DailyClosing", b =>

@@ -9,6 +9,7 @@ public class CreateSaleRequest
     public int Quantity { get; set; }
 
     public int? PatientId { get; set; }
-public string? PaymentType { get; set; }
+    public string? PaymentType { get; set; }
+    public string? SaleType { get; set; }
 }
 

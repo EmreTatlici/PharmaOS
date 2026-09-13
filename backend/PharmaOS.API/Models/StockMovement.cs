@@ -22,7 +22,7 @@ public class StockMovement
     public decimal? UnitSalePrice { get; set; }
     
     public string? PaymentType { get; set; }
-    
+public string? SaleType { get; set; }    
     public string? ReferenceType { get; set; }
 
     public int? ReferenceId { get; set; }
