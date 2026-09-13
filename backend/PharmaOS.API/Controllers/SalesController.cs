@@ -173,6 +173,26 @@ CardAmount =
         {
             return BadRequest("Geçersiz satış türü.");
         }
+        var turkeyTimeZone =
+            TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+
+        var turkeyNow =
+            TimeZoneInfo.ConvertTimeFromUtc(
+                DateTime.UtcNow,
+                turkeyTimeZone);
+
+        var today = DateOnly.FromDateTime(turkeyNow);
+
+        var todayClosingExists = await _context.DailyClosings
+            .AnyAsync(x =>
+                x.PharmacyId == request.PharmacyId &&
+                x.BusinessDate == today);
+
+        if (todayClosingExists)
+        {
+            return BadRequest(
+                "Bugünün kasa kapanışı yapılmış. Yeni satış oluşturulamaz.");
+        }
 
 
 
@@ -275,6 +295,21 @@ public async Task<ActionResult> UndoSale(
     {
         return NotFound("Satış kaydı bulunamadı.");
     }
+    var saleBusinessDate = DateOnly.FromDateTime(
+    TimeZoneInfo.ConvertTimeFromUtc(
+        originalSale.CreatedAt,
+        TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul")));
+
+var saleDayClosed = await _context.DailyClosings
+    .AnyAsync(x =>
+        x.PharmacyId == pharmacyId &&
+        x.BusinessDate == saleBusinessDate);
+
+if (saleDayClosed)
+{
+    return BadRequest(
+        "Bu satışın ait olduğu günün kasası kapanmış. Satış geri alınamaz.");
+}
 
     if (originalSale.MovementType != "Sale")
     {

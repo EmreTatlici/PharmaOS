@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PharmaOS.API.Data;
 using PharmaOS.API.Models;
+using PharmaOS.API.DTOs;
 
 namespace PharmaOS.API.Controllers;
 
@@ -18,8 +19,9 @@ public class DailyClosingsController : ControllerBase
 
     [HttpPost]
     public async Task<ActionResult<DailyClosing>> CreateDailyClosing(
-        [FromQuery] int pharmacyId)
+        [FromBody] CreateDailyClosingRequest request)
     {
+        var pharmacyId = request.PharmacyId;    
         var pharmacyExists = await _context.Pharmacies
             .AnyAsync(x => x.Id == pharmacyId && x.IsActive);
 
@@ -35,7 +37,14 @@ public class DailyClosingsController : ControllerBase
             turkeyTimeZone);
 
         var today = DateOnly.FromDateTime(turkeyNow);
+        var previousClosing = await _context.DailyClosings
+            .Where(x =>
+                x.PharmacyId == pharmacyId &&
+                x.BusinessDate < today)
+            .OrderByDescending(x => x.BusinessDate)
+            .FirstOrDefaultAsync();
 
+        var openingCashAmount = previousClosing?.ClosingCashAmount ?? 0;
         var existingClosing = await _context.DailyClosings
             .FirstOrDefaultAsync(x =>
                 x.PharmacyId == pharmacyId &&
@@ -98,16 +107,19 @@ public class DailyClosingsController : ControllerBase
                 : 0);
 
         var closing = new DailyClosing
-        {
-            PharmacyId = pharmacyId,
-            BusinessDate = today,
-            TotalSales = totalSales,
-            TotalAmount = totalAmount,
-            CashAmount = cashAmount,
-            CardAmount = cardAmount,
-            ClosedAt = DateTime.UtcNow,
-            ClosedBy = "System"
-        };
+            {
+                PharmacyId = pharmacyId,
+                BusinessDate = today,
+                TotalSales = totalSales,
+                TotalAmount = totalAmount,
+                CashAmount = cashAmount,
+                CardAmount = cardAmount,
+                OpeningCashAmount = openingCashAmount,
+                ClosingCashAmount = request.ClosingCashAmount,
+                CashDifference = request.ClosingCashAmount - (openingCashAmount + cashAmount),
+                ClosedAt = DateTime.UtcNow,
+                ClosedBy = "System"
+            };
 
         _context.DailyClosings.Add(closing);
 

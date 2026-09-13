@@ -17,7 +17,11 @@ public class DailyClosing
     public decimal CashAmount { get; set; }
 
     public decimal CardAmount { get; set; }
+    public decimal OpeningCashAmount { get; set; }
 
+    public decimal ClosingCashAmount { get; set; }
+
+    public decimal CashDifference { get; set; }
     public DateTime ClosedAt { get; set; }
 
     public string ClosedBy { get; set; } = "System";
