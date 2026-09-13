@@ -20,4 +20,5 @@ public class PharmaOSDbContext : DbContext
     public DbSet<PurchaseInvoiceItem> PurchaseInvoiceItems => Set<PurchaseInvoiceItem>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<DailyClosing> DailyClosings => Set<DailyClosing>();
+    public DbSet<StockPolicy> StockPolicies => Set<StockPolicy>();
 }

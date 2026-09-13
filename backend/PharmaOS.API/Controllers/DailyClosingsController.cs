@@ -29,6 +29,7 @@ public class DailyClosingsController : ControllerBase
         }
 
         var turkeyTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+
         var turkeyNow = TimeZoneInfo.ConvertTimeFromUtc(
             DateTime.UtcNow,
             turkeyTimeZone);
@@ -60,32 +61,36 @@ public class DailyClosingsController : ControllerBase
                 DateTimeKind.Unspecified),
             turkeyTimeZone);
 
-        var sales = await _context.StockMovements
+        var movements = await _context.StockMovements
             .Where(x =>
                 x.PharmacyId == pharmacyId &&
                 x.CreatedAt >= startOfDayUtc &&
                 x.CreatedAt < endOfDayUtc &&
-                (x.MovementType == "Sale" ||
-                 x.MovementType == "SaleReturn"))
+                (
+                    x.MovementType == "Sale" ||
+                    x.MovementType == "SaleReturn" ||
+                    x.MovementType == "SaleUndo"
+                ))
             .ToListAsync();
 
-        var totalSales = sales
-            .Where(x => x.MovementType == "Sale")
+        var totalSales = movements
+            .Where(x =>
+                x.MovementType == "Sale")
             .Sum(x => x.Quantity);
 
-        var totalAmount = sales.Sum(x =>
+        var totalAmount = movements.Sum(x =>
             x.MovementType == "Sale"
                 ? x.Quantity * (x.UnitSalePrice ?? 0)
                 : -x.Quantity * (x.UnitSalePrice ?? 0));
 
-        var cashAmount = sales.Sum(x =>
+        var cashAmount = movements.Sum(x =>
             x.PaymentType == "Cash"
                 ? x.MovementType == "Sale"
                     ? x.Quantity * (x.UnitSalePrice ?? 0)
                     : -x.Quantity * (x.UnitSalePrice ?? 0)
                 : 0);
 
-        var cardAmount = sales.Sum(x =>
+        var cardAmount = movements.Sum(x =>
             x.PaymentType == "Card"
                 ? x.MovementType == "Sale"
                     ? x.Quantity * (x.UnitSalePrice ?? 0)

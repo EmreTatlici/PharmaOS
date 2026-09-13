@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
 
+import DrugSearch from "./components/DrugSearch";
+import DrugTable from "./components/DrugTable";
+
 import "./App.css";
 
 const menuGroups = [
@@ -105,16 +108,102 @@ function Topbar() {
   );
 }
 
-import DrugSearch from "./components/DrugSearch";
-import DrugTable from "./components/DrugTable";
-
 function Dashboard() {
+  const [dailySales, setDailySales] = useState(null);
+  const [totalStock, setTotalStock] = useState(0);
+  const [criticalStockCount, setCriticalStockCount] = useState(0);
+  const [criticalStockItems, setCriticalStockItems] = useState([]);
+  const [expiringStockCount, setExpiringStockCount] = useState(0);
+  const [expiringStockItems, setExpiringStockItems] = useState([]);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(
+        "http:" +
+          "//localhost:5116/api/Sales/daily?pharmacyId=1"
+      ),
+      fetch("http:" + "//localhost:5116/api/InventoryItems"),
+      fetch(
+        "http:" +
+          "//localhost:5116/api/StockPolicies?pharmacyId=1"
+      ),
+    ])
+      .then(
+        async ([
+          salesResponse,
+          inventoryResponse,
+          criticalStockResponse,
+        ]) => {
+          if (
+            !salesResponse.ok ||
+            !inventoryResponse.ok ||
+            !criticalStockResponse.ok
+          ) {
+            throw new Error("Dashboard verileri alınamadı.");
+          }
+
+          const salesData = await salesResponse.json();
+          const inventoryData = await inventoryResponse.json();
+          const criticalStockData =
+            await criticalStockResponse.json();
+
+          // Daily sales
+          setDailySales(salesData);
+
+          // Total stock
+          const stockTotal = inventoryData.reduce(
+            (total, item) => total + item.quantity,
+            0
+          );
+
+          setTotalStock(stockTotal);
+
+          // Critical stock
+          const criticalItems = criticalStockData.filter(
+            (item) => item.isCritical
+          );
+
+          setCriticalStockItems(criticalItems);
+          setCriticalStockCount(criticalItems.length);
+
+          // Expiring stock
+          const today = new Date();
+          const thirtyDaysLater = new Date();
+
+          thirtyDaysLater.setDate(today.getDate() + 30);
+
+          const expiringItems = inventoryData.filter((item) => {
+            const expirationDate = new Date(item.expirationDate);
+
+            return (
+              item.quantity > 0 &&
+              expirationDate >= today &&
+              expirationDate <= thirtyDaysLater
+            );
+          });
+
+          setExpiringStockItems(expiringItems);
+          setExpiringStockCount(expiringItems.length);
+        }
+      )
+      .catch(() => {
+        setDailySales(null);
+        setTotalStock(0);
+        setCriticalStockCount(0);
+        setCriticalStockItems([]);
+        setExpiringStockCount(0);
+        setExpiringStockItems([]);
+      });
+  }, []);
+
   return (
     <section className="dashboard">
       <div className="section-heading">
         <div>
           <h3>Genel Bakış</h3>
-          <p>Eczanenizin güncel durumunu buradan takip edin.</p>
+          <p>
+            Eczanenizin güncel durumunu buradan takip edin.
+          </p>
         </div>
 
         <button className="primary-button">+ Yeni İşlem</button>
@@ -123,37 +212,63 @@ function Dashboard() {
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon green">💰</div>
+
           <div>
             <span>Bugünkü Satış</span>
-            <strong>₺24.850</strong>
-            <small className="positive">↑ %12,5 geçen haftaya göre</small>
+
+            <strong>
+              {dailySales
+                ? `₺${dailySales.totalAmount.toLocaleString(
+                    "tr-TR"
+                  )}`
+                : "₺0"}
+            </strong>
+
+            <small className="positive">
+              Günlük satış toplamı
+            </small>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="stat-icon blue">📦</div>
+
           <div>
             <span>Toplam Stok</span>
-            <strong>8.426</strong>
-            <small>1.284 farklı ürün</small>
+
+            <strong>
+              {totalStock.toLocaleString("tr-TR")}
+            </strong>
+
+            <small>Mevcut fiziksel stok</small>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="stat-icon orange">⚠️</div>
+
           <div>
             <span>Kritik Stok</span>
-            <strong>24</strong>
-            <small className="warning">Kontrol gerekiyor</small>
+
+            <strong>{criticalStockCount}</strong>
+
+            <small className="warning">
+              Kontrol gerekiyor
+            </small>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="stat-icon red">⏰</div>
+
           <div>
             <span>Yaklaşan SKT</span>
-            <strong>17</strong>
-            <small className="danger">30 gün içinde</small>
+
+            <strong>{expiringStockCount}</strong>
+
+            <small className="danger">
+              30 gün içinde
+            </small>
           </div>
         </div>
       </div>
@@ -166,40 +281,40 @@ function Dashboard() {
               <p>Stok seviyesi düşük ürünler</p>
             </div>
 
-            <button className="text-button">Tümünü Gör →</button>
+            <button className="text-button">
+              Tümünü Gör →
+            </button>
           </div>
 
-          <div className="table">
-            <span>Ürün</span>
-            <span>Barkod</span>
-            <span>Etken Madde</span>
-            <span>Üretici</span>
-          </div>
           <div className="table-header">
             <span>Ürün</span>
             <span>Barkod</span>
-            <span>Üretici</span>
             <span>Stok</span>
-            <span>Satış Fiyatı</span>
           </div>
 
-          {[
-            ["Parol 500 mg", "8699514090012", "3 adet", "critical"],
-            ["Augmentin 1000 mg", "8699546011234", "5 adet", "critical"],
-            ["Nexium 40 mg", "8699825098765", "8 adet", "low"],
-            ["Ventolin 100 mcg", "8699567012345", "9 adet", "low"],
-          ].map(([name, barcode, stock, type]) => (
-            <div className="table-row" key={barcode}>
-              <div className="product">
-                <div className="product-icon">💊</div>
-                <strong>{name}</strong>
-              </div>
-
-              <span>{barcode}</span>
-
-              <span className={`stock ${type}`}>{stock}</span>
+          {criticalStockItems.length === 0 ? (
+            <div className="table-row">
+              <span>
+                Şu anda kritik stokta ürün bulunmuyor.
+              </span>
             </div>
-          ))}
+          ) : (
+            criticalStockItems.map((item) => (
+              <div className="table-row" key={item.id}>
+                <div className="product">
+                  <div className="product-icon">💊</div>
+
+                  <strong>{item.drugName}</strong>
+                </div>
+
+                <span>{item.barcode}</span>
+
+                <span className="stock critical">
+                  {item.currentStock} adet
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -210,30 +325,62 @@ function Dashboard() {
             <p>Son kullanma tarihi yaklaşanlar</p>
           </div>
 
-          <button className="text-button">Tümünü Gör →</button>
+          <button className="text-button">
+            Tümünü Gör →
+          </button>
         </div>
 
         <div className="expiry-list">
-          {[
-            ["Dolorex 50 mg", "12 adet · Lot: DLR4521", "18 gün"],
-            ["Voltaren Emulgel", "8 adet · Lot: VLT2319", "24 gün"],
-            ["Calpol 120 mg", "6 adet · Lot: CPL7742", "29 gün"],
-            ["Lasix 40 mg", "4 adet · Lot: LSX1028", "30 gün"],
-          ].map(([name, detail, days]) => (
-            <div className="expiry-item" key={name}>
-              <div className="product-icon">💊</div>
+          {expiringStockItems.length === 0 ? (
+            <div className="expiry-item">
+              <div className="product-icon">✓</div>
 
               <div className="expiry-info">
-                <strong>{name}</strong>
-                <span>{detail}</span>
-              </div>
+                <strong>Yaklaşan SKT bulunmuyor</strong>
 
-              <div className="expiry-date">
-                <strong>{days}</strong>
-                <span>kaldı</span>
+                <span>
+                  Önümüzdeki 30 gün içinde süresi dolacak
+                  stok yok.
+                </span>
               </div>
             </div>
-          ))}
+          ) : (
+            expiringStockItems.map((item) => {
+              const expirationDate = new Date(
+                item.expirationDate
+              );
+
+              const today = new Date();
+
+              const daysRemaining = Math.ceil(
+                (expirationDate - today) /
+                  (1000 * 60 * 60 * 24)
+              );
+
+              return (
+                <div
+                  className="expiry-item"
+                  key={item.id}
+                >
+                  <div className="product-icon">💊</div>
+
+                  <div className="expiry-info">
+                    <strong>{item.drugName}</strong>
+
+                    <span>
+                      {item.quantity} adet · Lot:{" "}
+                      {item.batchNumber}
+                    </span>
+                  </div>
+
+                  <div className="expiry-date">
+                    <strong>{daysRemaining} gün</strong>
+                    <span>kaldı</span>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -244,7 +391,9 @@ function Dashboard() {
             <p>Bugün gerçekleştirilen son işlemler</p>
           </div>
 
-          <button className="text-button">Tüm işlemler →</button>
+          <button className="text-button">
+            Tüm işlemler →
+          </button>
         </div>
 
         <div className="recent-grid">
@@ -261,7 +410,9 @@ function Dashboard() {
           </div>
 
           <div className="recent-item">
-            <div className="recent-icon purchase">📦</div>
+            <div className="recent-icon purchase">
+              📦
+            </div>
 
             <div>
               <strong>Alış faturası</strong>
@@ -273,7 +424,9 @@ function Dashboard() {
           </div>
 
           <div className="recent-item">
-            <div className="recent-icon patient">👤</div>
+            <div className="recent-icon patient">
+              👤
+            </div>
 
             <div>
               <strong>Hasta kaydı</strong>
@@ -295,6 +448,7 @@ function DrugsPage() {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
   const [formData, setFormData] = useState({
     barcode: "",
     name: "",
@@ -303,47 +457,66 @@ function DrugsPage() {
     form: "",
     prescriptionType: "Normal",
   });
+
   const fetchDrugs = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const [drugsResponse, inventoryResponse] = await Promise.all([
-        fetch("http:" + "//localhost:5116/api/Drugs"),
-        fetch("http:" + "//localhost:5116/api/InventoryItems"),
-      ]);
+      const [drugsResponse, inventoryResponse] =
+        await Promise.all([
+          fetch("http:" + "//localhost:5116/api/Drugs"),
+          fetch(
+            "http:" +
+              "//localhost:5116/api/InventoryItems"
+          ),
+        ]);
 
-      if (!drugsResponse.ok || !inventoryResponse.ok) {
+      if (
+        !drugsResponse.ok ||
+        !inventoryResponse.ok
+      ) {
         throw new Error("Veriler alınamadı.");
       }
 
       const drugsData = await drugsResponse.json();
-      const inventoryData = await inventoryResponse.json();
+      const inventoryData =
+        await inventoryResponse.json();
 
-      const drugsWithInventory = drugsData.map((drug) => {
-        const drugInventory = inventoryData.filter(
-          (item) => item.drugId === drug.id,
-        );
+      const drugsWithInventory = drugsData.map(
+        (drug) => {
+          const drugInventory =
+            inventoryData.filter(
+              (item) => item.drugId === drug.id
+            );
 
-        const totalStock = drugInventory.reduce(
-          (total, item) => total + item.quantity,
-          0,
-        );
+          const totalStock =
+            drugInventory.reduce(
+              (total, item) =>
+                total + item.quantity,
+              0
+            );
 
-        const salePrice =
-          drugInventory.length > 0 ? drugInventory[0].salePrice : null;
+          const salePrice =
+            drugInventory.length > 0
+              ? drugInventory[0].salePrice
+              : null;
 
-        return {
-          ...drug,
-          totalStock,
-          salePrice,
-        };
-      });
+          return {
+            ...drug,
+            totalStock,
+            salePrice,
+          };
+        }
+      );
 
       setDrugs(drugsWithInventory);
       setLoading(false);
     } catch {
-      setError("İlaç ve stok verileri yüklenirken bir hata oluştu.");
+      setError(
+        "İlaç ve stok verileri yüklenirken bir hata oluştu."
+      );
+
       setLoading(false);
     }
   };
@@ -367,7 +540,9 @@ function DrugsPage() {
     return (
       drug.name.toLowerCase().includes(q) ||
       drug.barcode.includes(searchTerm) ||
-      drug.activeIngredient.toLowerCase().includes(q)
+      drug.activeIngredient
+        .toLowerCase()
+        .includes(q)
     );
   });
 
@@ -377,13 +552,16 @@ function DrugsPage() {
     setError("");
 
     try {
-      const response = await fetch("http:" + "//localhost:5116/api/Drugs", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await fetch(
+        "http:" + "//localhost:5116/api/Drugs",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("İlaç kaydedilemedi.");
@@ -402,7 +580,9 @@ function DrugsPage() {
 
       fetchDrugs();
     } catch {
-      setError("İlaç kaydedilirken bir hata oluştu.");
+      setError(
+        "İlaç kaydedilirken bir hata oluştu."
+      );
     }
   };
 
@@ -411,10 +591,16 @@ function DrugsPage() {
       <div className="section-heading">
         <div>
           <h3>İlaç & Stok</h3>
-          <p>İlaçlarınızı, stoklarınızı, lot ve SKT bilgilerinizi yönetin.</p>
+          <p>
+            İlaçlarınızı, stoklarınızı, lot ve SKT
+            bilgilerinizi yönetin.
+          </p>
         </div>
 
-        <button className="primary-button" onClick={() => setShowForm(true)}>
+        <button
+          className="primary-button"
+          onClick={() => setShowForm(true)}
+        >
           + Yeni İlaç
         </button>
       </div>
@@ -427,12 +613,18 @@ function DrugsPage() {
               <p>Yeni ilaç bilgilerini girin.</p>
             </div>
 
-            <button className="text-button" onClick={() => setShowForm(false)}>
+            <button
+              className="text-button"
+              onClick={() => setShowForm(false)}
+            >
               İptal
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="drug-form">
+          <form
+            onSubmit={handleSubmit}
+            className="drug-form"
+          >
             <div className="form-grid">
               <div className="form-field">
                 <label>Barkod</label>
@@ -502,10 +694,18 @@ function DrugsPage() {
                   value={formData.prescriptionType}
                   onChange={handleChange}
                 >
-                  <option value="Normal">Normal</option>
-                  <option value="Kırmızı">Kırmızı</option>
-                  <option value="Yeşil">Yeşil</option>
-                  <option value="Turuncu">Turuncu</option>
+                  <option value="Normal">
+                    Normal
+                  </option>
+                  <option value="Kırmızı">
+                    Kırmızı
+                  </option>
+                  <option value="Yeşil">
+                    Yeşil
+                  </option>
+                  <option value="Turuncu">
+                    Turuncu
+                  </option>
                 </select>
               </div>
             </div>
@@ -519,27 +719,44 @@ function DrugsPage() {
                 Vazgeç
               </button>
 
-              <button type="submit" className="primary-button">
+              <button
+                type="submit"
+                className="primary-button"
+              >
                 İlacı Kaydet
               </button>
             </div>
           </form>
         </div>
       )}
+
       <div className="panel">
         <DrugSearch
           value={searchTerm}
           onChange={setSearchTerm}
           count={filteredDrugs.length}
         />
+
         {loading && (
-          <div style={{ padding: "40px", color: "#64748b" }}>
+          <div
+            style={{
+              padding: "40px",
+              color: "#64748b",
+            }}
+          >
             İlaçlar yükleniyor...
           </div>
         )}
 
         {error && (
-          <div style={{ padding: "40px", color: "#dc2626" }}>{error}</div>
+          <div
+            style={{
+              padding: "40px",
+              color: "#dc2626",
+            }}
+          >
+            {error}
+          </div>
         )}
 
         {!loading && !error && (
@@ -568,8 +785,14 @@ function Page({ title, description }) {
           </div>
         </div>
 
-        <div style={{ padding: "40px", color: "#94a3b8" }}>
-          PharmaOS bu ekranı yakında kullanıma hazır hale getirecek.
+        <div
+          style={{
+            padding: "40px",
+            color: "#94a3b8",
+          }}
+        >
+          PharmaOS bu ekranı yakında kullanıma hazır
+          hale getirecek.
         </div>
       </div>
     </section>
@@ -586,9 +809,15 @@ function App() {
           <Topbar />
 
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route
+              path="/"
+              element={<Dashboard />}
+            />
 
-            <Route path="/stok" element={<DrugsPage />} />
+            <Route
+              path="/stok"
+              element={<DrugsPage />}
+            />
 
             <Route
               path="/hastalar"
