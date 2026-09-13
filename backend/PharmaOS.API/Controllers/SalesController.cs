@@ -17,35 +17,39 @@ public class SalesController : ControllerBase
         _context = context;
     }
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<SaleHistoryResponse>>> GetSales()
-    {
-        var sales = await _context.StockMovements
-            .Include(x => x.Drug)
-            .Include(x => x.InventoryItem)
-            .Where(x => x.MovementType == "Sale")
-            .OrderByDescending(x => x.CreatedAt)
-            .Select(x => new SaleHistoryResponse
-            {
-                MovementId = x.Id,
-                DrugId = x.DrugId,
-                DrugName = x.Drug.Name,
-                Barcode = x.Drug.Barcode,
-                BatchNumber = x.InventoryItem != null
-                    ? x.InventoryItem.BatchNumber
-                    : "",
-                Quantity = x.Quantity,
-                UnitSalePrice = x.UnitSalePrice ?? 0,
-                TotalAmount = x.Quantity * (x.UnitSalePrice ?? 0),
-                PaymentType = x.PaymentType,
-                SaleType = x.SaleType,
-                SoldAt = x.CreatedAt
-            })
-            .ToListAsync();
+[HttpGet]
+public async Task<ActionResult<IEnumerable<SaleHistoryResponse>>> GetSales()
+{
+    var sales = await _context.StockMovements
+        .Include(x => x.Drug)
+        .Include(x => x.InventoryItem)
+        .Where(x => x.MovementType == "Sale")
+        .OrderByDescending(x => x.CreatedAt)
+        .Select(x => new SaleHistoryResponse
+        {
+            MovementId = x.Id,
+            DrugId = x.DrugId,
+            DrugName = x.Drug.Name,
+            Barcode = x.Drug.Barcode,
+            BatchNumber = x.InventoryItem != null
+                ? x.InventoryItem.BatchNumber
+                : "",
+            Quantity = x.Quantity,
+            UnitSalePrice = x.UnitSalePrice ?? 0,
+            TotalAmount = x.Quantity * (x.UnitSalePrice ?? 0),
+            PaymentType = x.PaymentType,
+            SaleType = x.SaleType,
+            SoldAt = x.CreatedAt,
 
-        return Ok(sales);
-    }
+            IsUndone = _context.StockMovements.Any(undo =>
+                undo.MovementType == "SaleUndo" &&
+                undo.ReferenceType == "SaleUndo" &&
+                undo.ReferenceId == x.Id)
+        })
+        .ToListAsync();
 
+    return Ok(sales);
+}
     [HttpGet("daily")]
     public async Task<ActionResult<DailySalesResponse>> GetDailySales()
     {
@@ -79,40 +83,72 @@ public class SalesController : ControllerBase
                     DateTimeKind.Unspecified),
                 turkeyTimeZone);
 
-        var sales = await _context.StockMovements
-            .Where(x =>
-                x.MovementType == "Sale" &&
-                x.CreatedAt >= startOfDayUtc &&
-                x.CreatedAt < endOfDayUtc)
-            .ToListAsync();
-
+var sales = await _context.StockMovements
+    .Where(x =>
+        (x.MovementType == "Sale" ||
+         x.MovementType == "SaleUndo") &&
+        x.CreatedAt >= startOfDayUtc &&
+        x.CreatedAt < endOfDayUtc)
+    .ToListAsync();
         var response = new DailySalesResponse
         {
             Date = today,
 
-            TotalSales = sales.Count,
+TotalSales =
+    sales
+        .Where(x => x.MovementType == "Sale")
+        .Sum(x => x.Quantity)
+    -
+    sales
+        .Where(x => x.MovementType == "SaleUndo")
+        .Sum(x => x.Quantity),
 
-            PrescriptionSales =
-                sales.Count(x => x.SaleType == "Prescription"),
+PrescriptionSales =
+    sales
+        .Where(x =>
+            x.MovementType == "Sale" &&
+            x.SaleType == "Prescription")
+        .Sum(x => x.Quantity)
+    -
+    sales
+        .Where(x =>
+            x.MovementType == "SaleUndo" &&
+            x.SaleType == "Prescription")
+        .Sum(x => x.Quantity),
 
-            RetailSales =
-                sales.Count(x => x.SaleType == "Retail"),
+RetailSales =
+    sales
+        .Where(x =>
+            x.MovementType == "Sale" &&
+            x.SaleType == "Retail")
+        .Sum(x => x.Quantity)
+    -
+    sales
+        .Where(x =>
+            x.MovementType == "SaleUndo" &&
+            x.SaleType == "Retail")
+        .Sum(x => x.Quantity),
+TotalAmount =
+    sales.Sum(x =>
+        x.MovementType == "Sale"
+            ? x.Quantity * (x.UnitSalePrice ?? 0)
+            : -x.Quantity * (x.UnitSalePrice ?? 0)),
 
-            TotalAmount =
-                sales.Sum(x =>
-                    x.Quantity * (x.UnitSalePrice ?? 0)),
+CashAmount =
+    sales
+        .Where(x => x.PaymentType == "Cash")
+        .Sum(x =>
+            x.MovementType == "Sale"
+                ? x.Quantity * (x.UnitSalePrice ?? 0)
+                : -x.Quantity * (x.UnitSalePrice ?? 0)),
 
-            CashAmount =
-                sales
-                    .Where(x => x.PaymentType == "Cash")
-                    .Sum(x =>
-                        x.Quantity * (x.UnitSalePrice ?? 0)),
-
-            CardAmount =
-                sales
-                    .Where(x => x.PaymentType == "Card")
-                    .Sum(x =>
-                        x.Quantity * (x.UnitSalePrice ?? 0))
+CardAmount =
+    sales
+        .Where(x => x.PaymentType == "Card")
+        .Sum(x =>
+            x.MovementType == "Sale"
+                ? x.Quantity * (x.UnitSalePrice ?? 0)
+                : -x.Quantity * (x.UnitSalePrice ?? 0))
         };
 
         return Ok(response);
@@ -223,4 +259,83 @@ public class SalesController : ControllerBase
                     : null
         });
     }
+[HttpPost("{movementId}/undo")]
+public async Task<ActionResult> UndoSale(
+    int movementId,
+    [FromQuery] int pharmacyId)
+{
+    var originalSale = await _context.StockMovements
+        .Include(x => x.InventoryItem)
+        .Include(x => x.Drug)
+        .FirstOrDefaultAsync(x =>
+            x.Id == movementId &&
+            x.PharmacyId == pharmacyId);
+
+    if (originalSale == null)
+    {
+        return NotFound("Satış kaydı bulunamadı.");
+    }
+
+    if (originalSale.MovementType != "Sale")
+    {
+        return BadRequest("Bu hareket bir satış kaydı değil.");
+    }
+
+    var alreadyUndone = await _context.StockMovements
+        .AnyAsync(x =>
+            x.MovementType == "SaleUndo" &&
+            x.ReferenceType == "SaleUndo" &&
+            x.ReferenceId == originalSale.Id);
+
+    if (alreadyUndone)
+    {
+        return BadRequest("Bu satış daha önce geri alınmış.");
+    }
+
+    if (originalSale.InventoryItem == null)
+    {
+        return BadRequest("Satışın bağlı olduğu stok lotu bulunamadı.");
+    }
+
+    await using var transaction =
+        await _context.Database.BeginTransactionAsync();
+
+    originalSale.InventoryItem.Quantity += originalSale.Quantity;
+
+    var undoMovement = new StockMovement
+    {
+        PharmacyId = originalSale.PharmacyId,
+        DrugId = originalSale.DrugId,
+        InventoryItemId = originalSale.InventoryItemId,
+        MovementType = "SaleUndo",
+        Quantity = originalSale.Quantity,
+        UnitCost = originalSale.UnitCost,
+        UnitSalePrice = originalSale.UnitSalePrice,
+        PaymentType = originalSale.PaymentType,
+        SaleType = originalSale.SaleType,
+        ReferenceType = "SaleUndo",
+        ReferenceId = originalSale.Id,
+        Note = $"Satış geri alındı - Orijinal satış: #{originalSale.Id}"
+    };
+
+    _context.StockMovements.Add(undoMovement);
+
+    await _context.SaveChangesAsync();
+
+    await transaction.CommitAsync();
+
+    return Ok(new
+    {
+        message = "Satış geri alındı.",
+        originalMovementId = originalSale.Id,
+        restoredQuantity = originalSale.Quantity,
+        restoredStock = originalSale.InventoryItem.Quantity,
+        reversedAmount =
+            originalSale.Quantity * (originalSale.UnitSalePrice ?? 0),
+        paymentType = originalSale.PaymentType,
+        saleType = originalSale.SaleType,
+        drug = originalSale.Drug.Name,
+        batchNumber = originalSale.InventoryItem.BatchNumber
+    });
+}
 }
